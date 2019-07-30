@@ -6,7 +6,7 @@ mmops=$3
 
 freq=$(cat /sys/class/drm/card0/gt_act_freq_mhz)
 
-echo "global_range(#)" "repetion(#)" "time(ns)" "BW(GB/s)"
+echo "global_range(#)" "repetion(#)" "time(ns)" "BW(GB/s)" "BW (B/clk)"
 for cl_global in "$simd_width"  "$simd_width"*24  "$simd_width"*24*7  
 do
     for n in 1 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384 32768 
