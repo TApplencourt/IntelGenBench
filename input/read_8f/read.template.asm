@@ -8,7 +8,7 @@ L0:
          shl (8|M0)               r3.0<1>:d     r3.0<8;8,1>:d     2:w             
          add (8|M0)               r3.0<1>:d     r3.0<8;8,1>:d     r5.2<0;1,0>:d    {Compacted}
 
-        {% for n in range(n) %}
+        {% for _ in range(n) %}
         send (8|M0)              r6:f     r3      0xC         0x2106E00  // Load from r6 amd store in r3
         {%- endfor %}
 
