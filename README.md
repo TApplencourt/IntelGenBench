@@ -1,5 +1,12 @@
 # Requirement
+
+## Python
 - `jinja2`
+
+## Compute RunTime
+- ioc64 
+- ocloc
+
 
 # Output 
 `./src/run_bench.sh input/read_8f/ | column -t`
