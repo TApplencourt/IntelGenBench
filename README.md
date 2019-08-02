@@ -13,11 +13,6 @@
 
 Gen 9.5 24 EU
 ```
-global_range(#)  repetion(#)  time(ns)  BW(GB/s)
-
-```
-act_freq_mhz     350
-
 mops(#)  repetion(#)  time(ns)  BW(GB/s)  BW      (B/clk)
 16               1            6083      .02       .05
 16               2            6416      .03       .08
