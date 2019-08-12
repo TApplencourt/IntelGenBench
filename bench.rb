@@ -356,16 +356,18 @@ p h_a
 # Compute summary
 freq=`cat /sys/class/drm/card0/gt_max_freq_mhz`.strip.to_i
 number_subslice = device.max_compute_units / 8
-l3_peak=number_subslice*64
 bytes_transfered = h_a_byte_size * UNROLL_FACTOR 
 bw_per_second =  bytes_transfered.to_f / elapsed_time
 bw_per_clk = 1000*bw_per_second / freq
+bw_per_clk_per_subslice = bw_per_clk / number_subslice
+peak = 100 * bw_per_clk_per_subslice / 64
 
 puts "Number of subslice: #{number_subslice}"
 puts "memory_footprint: #{h_a_byte_size  / 1E3} KB"
 puts "unroll_factor: #{UNROLL_FACTOR}"
 puts "ν: #{freq} mhz"
 puts "Δt: #{elapsed_time} ns"
-puts "bw: #{bw_per_second} GB/s"
-puts "bw: #{bw_per_clk} B/clk"
-puts "peak: #{100*bw_per_clk / l3_peak } %"
+puts "bw: #{'%.2f' % bw_per_second} GB/s"
+puts "  : #{'%.2f' % bw_per_clk} B/clk"
+puts "  : #{'%.2f' % bw_per_clk_per_subslice} B/clk/susblice"
+puts "peak: #{'%.2f' % peak} %"
