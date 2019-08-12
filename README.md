@@ -1,10 +1,11 @@
 # Requirement
 - `ruby` 
 - `opencl_ruby_ffi` (ruby opencl binding `gem install opencl_ruby_ffi`)
-- `ocloc` (see https://github.com/intel/compute-runtime)
+- `ocloc` (see <https://github.com/intel/compute-runtime>)
 
 # Output 
 ```
+$./bench.rb store_double_16
 Warning OpenCL 2.1 loader detected!
 Posible argument
 store_uint_16

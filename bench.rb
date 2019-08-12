@@ -343,9 +343,9 @@ d_a = context.create_buffer(h_a_byte_size)
 # Launching the kernel kernel
 elapsed_time = 2**64 - 1
 REPETITION_LAUCH.times do 
-	event = kernel.enqueue_with_args(queue, [GLOBAL_SIZE], d_a, local_work_size: [LOCAL_SIZE])
-    OpenCL::wait_for_events([event])
-	elapsed_time = [elapsed_time, event.profiling_command_end -  event.profiling_command_start].min
+  event = kernel.enqueue_with_args(queue, [GLOBAL_SIZE], d_a, local_work_size: [LOCAL_SIZE])
+  OpenCL::wait_for_events([event])
+  elapsed_time = [elapsed_time, event.profiling_command_end -  event.profiling_command_start].min
 end 
 queue.enqueue_read_buffer(d_a,h_a)
 queue.finish
