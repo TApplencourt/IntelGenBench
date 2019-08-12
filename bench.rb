@@ -275,7 +275,7 @@ src_template = <<EOF
 __attribute__((intel_reqd_sub_group_size(16)))
 __kernel void icule(global float *a) {
     const int i = get_global_id(0);
-    a[i];
+    a[i] = a[i] + 1;
 }
 EOF
 
@@ -299,6 +299,46 @@ bumdle["load_float_16"] = {"src" => src_template,
                            "h_a" => NArray.sfloat(GLOBAL_SIZE)}
 
 
+# Load float 16
+src_template = <<EOF
+__attribute__((intel_reqd_sub_group_size(16)))
+__kernel void icule(global double *a) {
+    const int i = get_global_id(0);
+    a[i] = a[i] + i;
+}
+EOF
+
+asm_template = <<EOF
+(W)      mov (8|M0)               r2.0<1>:ud    r0.0<1;1,0>:ud
+(W)      or (1|M0)                cr0.0<1>:ud   cr0.0<0;1,0>:ud   0x4C0:uw         {Switch}
+(W)      mul (1|M0)               r3.0<1>:d     r5.3<0;1,0>:d     r2.1<0;1,0>:d    {Compacted}
+(W)      mov (8|M0)               r127.0<1>:ud  r2.0<8;8,1>:ud                   {Compacted}
+         add (16|M0)              r6.0<1>:d     r3.0<0;1,0>:d     r1.0<16;16,1>:uw
+         add (16|M0)              r8.0<1>:d     r6.0<8;8,1>:d     r4.0<0;1,0>:d    {Compacted}
+         shl (16|M0)              r10.0<1>:d    r8.0<8;8,1>:d     3:w
+         mov (8|M0)               r26.0<1>:df   r8.0<8;8,1>:d
+         mov (8|M8)               r28.0<1>:df   r9.0<8;8,1>:d
+         add (16|M0)              r12.0<1>:d    r10.0<8;8,1>:d    r5.2<0;1,0>:d    {Compacted}
+<% UNROLL_FACTOR.times do  %>
+         send (16|M0)             r14:w    r12     0xC         0x4405C00  //    wr:2+?, rd:4, Untyped Surface Read msc:28, to #0
+<% end %>
+         mov (8|M0)               r22.0<2>:d    r14.0<8;8,1>:d
+         mov (8|M8)               r24.0<2>:d    r15.0<8;8,1>:d
+         mov (8|M0)               r22.1<2>:d    r16.0<8;8,1>:d
+         mov (8|M8)               r24.1<2>:d    r17.0<8;8,1>:d
+         add (8|M0)               r30.0<1>:df   r22.0<4;4,1>:df   r26.0<4;4,1>:df
+         add (8|M8)               r32.0<1>:df   r24.0<4;4,1>:df   r28.0<4;4,1>:df
+         mov (8|M0)               r18.0<1>:d    r30.0<2;1,0>:d
+         mov (8|M0)               r20.0<1>:d    r30.1<2;1,0>:d
+         mov (8|M8)               r19.0<1>:d    r32.0<2;1,0>:d
+         mov (8|M8)               r21.0<1>:d    r32.1<2;1,0>:d
+         sends (16|M0)            null:w   r12     r18     0x10C       0x4025C00  //    wr:2+4, rd:0, Untyped Surface Write msc:28, to #0
+(W)      send (8|M0)              null     r127    0x27        0x2000010  {EOT} //    wr:1+?, rd:0, fc: 0x10
+EOF
+
+bumdle["load_double_16"] = {"src" => src_template,
+                           "asm" => asm_template,
+                           "h_a" => NArray.float(GLOBAL_SIZE)}
 
 # Chose the benchmark
 puts 'Posible argument'
