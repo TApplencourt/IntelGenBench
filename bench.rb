@@ -11,7 +11,8 @@ require 'erb'
 device = OpenCL::platforms::last::devices::first
 context = OpenCL::create_context(device)
 
-GLOBAL_SIZE=7*8*device.max_compute_units*64
+EU_NUMBER=device.max_compute_units
+GLOBAL_SIZE=7*8*EU_NUMBER*64
 LOCAL_SIZE=64
 UNROLL_FACTOR= 1000
 REPETITION_LAUCH=20
@@ -38,25 +39,27 @@ class OpenCL::Context
 
     # Create a temporary dir to save all the intermediate data
     Dir.mktmpdir("bin_kernel") { |d|
+      d = "bin_kernel"
       Dir::chdir(d)
       
       # Write original binary
-      File::open(bin_path, "wb") { |f| f.write program.binaries.first[1] }
+      # File::open(bin_path, "wb") { |f| f.write program.binaries.first[1] }
 
       # Disamble it
-      puts `ocloc disasm -file #{bin_path} -device kbl -dump ./`
-      exit if $?.exitstatus != 0
+      # puts `ocloc disasm -file #{bin_path} -device kbl -dump ./`
+      # exit if $?.exitstatus != 0
 
       # Patch the assembly
-      File::open(asm_path, "r") { |f| puts f.read} if print_orig_asm
-      File::open(asm_path, "w") { |f| f.write src_asm }
+      # File::open(asm_path, "r") { |f| puts f.read} if print_orig_asm
+      # File::open(asm_path, "w") { |f| f.write src_asm }
       
       # Reasamble it
-      puts `ocloc asm -out #{bin_path_new} -device kbl -dump ./`
-	  exit if $?.exitstatus != 0
+      # puts `ocloc asm -out #{bin_path_new} -device kbl -dump ./`
+	  # exit if $?.exitstatus != 0
+        
 
       # Create the new program
-      program_new, _ = OpenCL.create_program_with_binary(self, 
+       program_new, _ = OpenCL.create_program_with_binary(self, 
                                                          devices, 
                                                          [File::read("#{bin_path_new}", mode: "rb")])
       return program_new
@@ -395,7 +398,7 @@ p h_a
 
 # Compute summary
 freq=`cat /sys/class/drm/card0/gt_max_freq_mhz`.strip.to_i
-number_subslice = device.max_compute_units / 8
+number_subslice = EU_NUMBER / 8
 bytes_transfered = h_a_byte_size * UNROLL_FACTOR 
 bw_per_second =  bytes_transfered.to_f / elapsed_time
 bw_per_clk = 1000*bw_per_second / freq
