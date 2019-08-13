@@ -1,8 +1,8 @@
 # Requirement
 - `ruby` 
-- `opencl_ruby_ffi` (ruby opencl binding `gem install opencl_ruby_ffi`)
+  - `opencl_ruby_ffi` (ruby opencl binding `gem install opencl_ruby_ffi`)
 - `ocloc` (see <https://github.com/intel/compute-runtime>)
-
+ 
 # Summary
 
 Gen9 GT2
