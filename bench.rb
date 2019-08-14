@@ -35,7 +35,7 @@ class OpenCL::Program
 end
 
 class OpenCL::Context
-  def create_program_with_source_and_assembly(src_read, unroll_factor)
+  def patch_and_create_program_with_source(src_read, unroll_factor)
    
 
     # Create the original binary
@@ -118,7 +118,7 @@ EOF
 
 # Create and build the program 
 #program = context.create_program_with_source(src_read)
-program = context.create_program_with_source_and_assembly(src_read, UNROLL_FACTOR)
+program = context.patch_and_create_program_with_source(src_read, UNROLL_FACTOR)
 
 # Create the queue
 queue = context.create_command_queue(device, :properties => OpenCL::CommandQueue::PROFILING_ENABLE)
