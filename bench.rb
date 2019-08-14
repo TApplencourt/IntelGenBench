@@ -2,9 +2,7 @@
 
 require 'opencl_ruby_ffi'
 require 'narray_ffi'
-
 require 'tmpdir'
-require 'erb'
 
 class OpenCL::Device
     def eu_number
@@ -37,7 +35,8 @@ class OpenCL::Program
 end
 
 class OpenCL::Context
-  def create_program_with_source_and_assembly(src_read, src_asm, print_orig_asm = false)
+  def create_program_with_source_and_assembly(src_read, unroll_factor)
+   
 
     # Create the original binary
     program = OpenCL.create_program_with_source(self,src_read)
@@ -58,9 +57,15 @@ class OpenCL::Context
       exit if $?.exitstatus != 0
 
       # Patch the assembly
-      File::open(asm_path, "r") { |f| puts f.read} if print_orig_asm
-      File::open(asm_path, "w") { |f| f.write src_asm }
-      
+      File::open(asm_path, "r+") { |f| 
+           
+          src_asm = f.read.gsub(/(^\s+send\s.*\s+sends\s.*?$\n)/m, "\\1"*unroll_factor["copy"]) # Duplicate everything between a load and store
+                          .gsub(/(^\s*send\s.*\n)/, "\\1"*unroll_factor["read"])  # Duplicate all the load
+                          .gsub(/(^\s*sends\s.*\n)/, "\\1"*unroll_factor["write"]) # Dupliace all the store
+          f.seek(0, IO::SEEK_SET)
+          f.write(src_asm)
+      }
+
       # Reasamble it
       puts `ocloc asm -out #{bin_path_new} -device kbl -dump ./`
 	  exit if $?.exitstatus != 0
@@ -73,36 +78,6 @@ class OpenCL::Context
     }
   end
 end
-
-src_template = <<EOF
-__attribute__((intel_reqd_sub_group_size(16)))
-__kernel void icule(global int4 * restrict a, global int4 * restrict b) {
-    const int i = get_global_id(0);
-    a[i] = b[i];
-}
-EOF
-
-asm_template = <<EOF
-(W)      mov (8|M0)               r2.0<1>:ud    r0.0<1;1,0>:ud
-(W)      or (1|M0)                cr0.0<1>:ud   cr0.0<0;1,0>:ud   0x4C0:uw         {Switch}
-(W)      mul (1|M0)               r3.0<1>:d     r6.0<0;1,0>:d     r2.1<0;1,0>:d    {Compacted}
-(W)      mov (8|M0)               r127.0<1>:ud  r2.0<8;8,1>:ud                   {Compacted}
-         add (16|M0)              r7.0<1>:d     r3.0<0;1,0>:d     r1.0<16;16,1>:uw
-         add (16|M0)              r7.0<1>:d     r7.0<8;8,1>:d     r4.0<0;1,0>:d    {Compacted}
-         shl (16|M0)              r7.0<1>:d     r7.0<8;8,1>:d     4:w
-         add (16|M0)              r9.0<1>:d     r7.0<8;8,1>:d     r5.5<0;1,0>:d    {Compacted}
-         add (16|M0)              r7.0<1>:d     r7.0<8;8,1>:d     r5.4<0;1,0>:d    {Compacted}
-<% UNROLL_FACTOR["copy"].times do  %>
-  <% UNROLL_FACTOR["read"].times do  %>
-         send (16|M0)             r11:w    r9      0xC         0x4805001  //    wr:2+?, rd:8, Untyped Surface Read msc:16, to #1
-  <% end %>
-  <% UNROLL_FACTOR["write"].times do  %>
-         sends (16|M0)            null:w   r7      r11     0x20C       0x4025000  //    wr:2+8, rd:0, Untyped Surface Write msc:16, to #0
-  <% end %>
-<% end %>
-(W)      send (8|M0)              null     r127    0x27        0x2000010  {EOT} //    wr:1+?, rd:0, fc: 0x10
-
-EOF
 
 device = OpenCL::platforms::last::devices::first
 context = OpenCL::create_context(device)
@@ -132,13 +107,18 @@ h_a = NArray.int(GLOBAL_SIZE*VECTOR_LENGTH)
 # Compute size of the array
 h_byte_size = h_a.size * h_a.element_size
 
-# Apply template
-src_read = ERB.new(src_template).result()
-asm_read = ERB.new(asm_template).result()
+# Create opencl kernel
+src_read = <<EOF
+__attribute__((intel_reqd_sub_group_size(16)))
+__kernel void icule(global int#{VECTOR_LENGTH} * restrict a, global int#{VECTOR_LENGTH} * restrict b) {
+    const int i = get_global_id(0);
+    a[i] = b[i];
+}
+EOF
 
 # Create and build the program 
 #program = context.create_program_with_source(src_read)
-program = context.create_program_with_source_and_assembly(src_read, asm_read, true)
+program = context.create_program_with_source_and_assembly(src_read, UNROLL_FACTOR)
 
 # Create the queue
 queue = context.create_command_queue(device, :properties => OpenCL::CommandQueue::PROFILING_ENABLE)
