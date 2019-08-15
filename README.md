@@ -5,11 +5,18 @@
  
 # Summary
 
-Gen9 GT2
+Gen9 GT2 (1.2 GHz)
 ```
-R      kernel:  61.71 B/clk/subslice
+R      kernel: 61.71 B/clk/subslice
 W      kernel: 50.89 B/clk/subslice
-R+W kernel: 61.01 B/clk/subslice
+R+W    kernel: 61.01 B/clk/subslice
+```
+
+Gen9 GT3e (1.1 GHz)
+```
+R      kernel: 40.58 B/clk/subslice
+W      kernel: 41.64 B/clk/subslice
+R+W    kernel: 50.50 B/clk/subslice
 ```
 
 # Output 
