@@ -31,10 +31,6 @@ __kernel void icule(global #{opencl_type} * restrict a, global #{opencl_type} * 
 - The `UNROLL_FACTOR` is fixed to 1000 per type.
     - We will run all the bencharmk for `copy`, `read` and `write`.
 - We will `{int,float,double} * {1, 2 ,4}` opencl type.
- 
-# Result
-
-See `.log` files
 
 # Summary
 
@@ -42,6 +38,11 @@ See `.log` files
 - In maximun:
   - In GT2 (1 slice / 3 sublice), you can optain 95% of peak (60.95 B/clk/subslice). 
   - In GT3 (2 slice /3 sublice), you can optain 79% of peak (50.74 B/clk/subslice).
+
+# Result
+
+See `.log` files
+
 
 ### GT3 Posible Explanation.
 
