@@ -11,7 +11,7 @@ Measure L3 Bandwith of your Gen*.
  
 # Kernel
 
-pseudo_code:
+Pseudo code used:
 ```
 __attribute__((intel_reqd_sub_group_size(#{subgroup_size})))
 __kernel void icule(global #{opencl_type} * restrict a, global #{opencl_type} * restrict b) {
@@ -28,10 +28,12 @@ __kernel void icule(global #{opencl_type} * restrict a, global #{opencl_type} * 
 ```
  
 - The `subgroup_size` is fixed to 16.
-- The `UNROLL_FACTOR` is fixed to 1000.
-- We use `{int,float,double} * {1, 2 ,4}`
+- The `UNROLL_FACTOR` is fixed to 1000 per type.
+    - We will run all the bencharmk for `copy`, `read` and `write`.
+- We will `{int,float,double} * {1, 2 ,4}` opencl type.
  
 # Result
+
 See `.log` files
 
 # Summary
@@ -44,7 +46,6 @@ See `.log` files
 ### GT3 Posible Explanation.
 
 Maybe L3 fabric contention?
-
 
 # Todo:
 
