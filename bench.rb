@@ -4,19 +4,18 @@ require 'opencl_ruby_ffi'
 require 'narray_ffi'
 require_relative 'monkey'
 
+s = Struct.new(:type, :byte)
+BABEL_NARRAY =  {"int" =>  s.new("int",2),
+                 "float" => s.new("sfloat", 2),
+                 "double" => s.new("float",4) }
 
-BABEL_NARRAY =  {"int" =>  ["int",2],
-                 "float" => ["sfloat", 2],
-                 "double" => ["float",4] }
+def bench(context,queue, global_size, unroll_factor, high_level_type, vector_length = 1, local_size= 32, subgroup_size=16, repetition_lauch=20)
 
-def bench(context,queue, global_size, unroll_factor, type, vector_length = 1, local_size= 32, subgroup_size=16, repetition_lauch=20)
-   # Compute array and size of the array
-   narray_type =  BABEL_NARRAY[type][0]
-   h_a = NArray.public_send(narray_type,global_size*vector_length)
-   h_byte_size = h_a.size * h_a.element_size
+  # Compute array and size of the array
+  h_a = NArray.public_send(BABEL_NARRAY[high_level_type].type, global_size*vector_length)
 
   # Create opencl kernel
-  opencl_type= type
+  opencl_type= high_level_type
   if vector_length != 1
       opencl_type += vector_length.to_s
   end
@@ -28,6 +27,8 @@ __kernel void icule(global #{opencl_type} * restrict a, global #{opencl_type} * 
 }
 EOF
 
+  bytes_transfered = h_a.byte_size * ( unroll_factor["write"] + unroll_factor["read"] ) * unroll_factor["copy"]
+
   # Create and build the program 
   #program = context.create_program_with_source(src_read)
   program = context.patch_and_create_program_with_source(src_read, unroll_factor)
@@ -36,8 +37,8 @@ EOF
   kernel = program.create_kernel(program.kernels_lazy.first.name)
 
   # Create device buffer and fill it with 0
-  d_a = context.create_buffer(h_byte_size)
-  d_b = context.create_buffer(h_byte_size)
+  d_a = context.create_buffer(h_a.byte_size)
+  d_b = context.create_buffer(h_a.byte_size)
   event = queue.enqueue_fill_buffer(d_b, OpenCL::Int1.new(0))
   OpenCL::wait_for_events([event])
 
@@ -50,12 +51,6 @@ EOF
   end 
   queue.enqueue_read_buffer(d_a,h_a)
   queue.finish
-  #p "After"
-  #p h_a
-  
-  bytes_transfered = h_byte_size * ( unroll_factor["write"] + unroll_factor["read"] ) * unroll_factor["copy"]
-
-  #puts "memory_footprint: #{2*h_byte_size  / 1E3} KB"
 
   return bytes_transfered, elapsed_time
 end 
@@ -67,35 +62,22 @@ device = OpenCL::platforms::last::devices::first
 context = OpenCL::create_context(device)
 queue = context.create_command_queue(device, :properties => OpenCL::CommandQueue::PROFILING_ENABLE)
 
-
 oversubscribed_ratio=64*8
-
-# 0 Read, 1 Write, 2 Copy
-UNROLL_FACTOR = Hash.new(1)
-case ARGV[0].to_i
-when 0
-    UNROLL_FACTOR["read"] = 1000
-when 1
-    UNROLL_FACTOR["write"] = 1000
-when 2
-    UNROLL_FACTOR["copy"] = 1000
-end
 
 # 7 Thread * Number of EU * overhead number
 global_size=7*device.eu_number*oversubscribed_ratio
 
 puts "Number of subslice: #{device.subslice_number}"
 puts "global size: #{global_size}"
-puts "Unroll factor:"
-puts "  Read:  #{UNROLL_FACTOR["read"]}"
-puts "  Write: #{UNROLL_FACTOR["write"]}"
-puts "  Copy:  #{UNROLL_FACTOR["copy"]}"
 puts "ν: #{device.freq_mhz} mhz"
 
-for type in ["int","float", "double"]
-for vector in [1,2,4]
-  #puts "type: #{type}#{vector}"
-  bytes_transfered, elapsed_time = bench(context,queue,global_size, UNROLL_FACTOR, type,vector)
+puts "_ type  B/clk/subslice %peak"
+for bench, type, vector in ["read","write","copy"].product(["int","float", "double"], 
+                                                           [1,2,4])
+
+  unroll_factor = Hash.new(1)
+  unroll_factor[bench] = 1000
+  bytes_transfered, elapsed_time = bench(context,queue,global_size, unroll_factor, type,vector)
 
   # Compute summary
   bw_per_second =  bytes_transfered.to_f / elapsed_time
@@ -103,11 +85,5 @@ for vector in [1,2,4]
   bw_per_clk_per_subslice = bw_per_clk / device.subslice_number
   peak = 100 * bw_per_clk_per_subslice / 64
 
-  #puts "Δt: #{elapsed_time} ns"
-  #puts "bw: #{'%.2f' % bw_per_second} GB/s"
-  #puts "  : #{'%.2f' % bw_per_clk} B/clk"
-  #puts "bw: #{'%.2f' % bw_per_clk_per_subslice} B/clk/subslice"
-  #puts "peak: #{'%.2f' % peak} %"
-  puts "#{type}#{vector} #{'%.2f' % bw_per_clk_per_subslice} #{'%.2f' % peak}%"
-end
+  puts "#{bench} #{type}#{vector} #{'%.2f' % bw_per_clk_per_subslice} #{'%.2f' % peak}%"
 end

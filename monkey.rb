@@ -1,5 +1,11 @@
 require 'tmpdir'
 
+class NArray
+    def byte_size
+        return self.size * self.element_size
+    end
+end
+
 class OpenCL::Device
     def eu_number
         @eu_number ||= self.max_compute_units
@@ -17,7 +23,7 @@ end
 
 class OpenCL::Program
     def kernels_lazy
-        # Force the kernel to be constructed before used
+        # Force the kernel to be build before used
         @kernels_lazy ||= begin
             begin
                 self.build #(options: "-cl-opt-disable")
