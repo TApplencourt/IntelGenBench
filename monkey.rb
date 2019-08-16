@@ -62,6 +62,7 @@ class OpenCL::Context
           src_asm = f.read.gsub(/(^\s+send\s.*\s+sends\s.*?$\n)/m, '\1'*unroll_factor["copy"]) # Duplicate everything between a load and store
                           .gsub(/(^\s+send\s.*\n)/,                '\1'*unroll_factor["read"])  # Duplicate all the loads
                           .gsub(/(^\s+sends\s.*\n)/,               '\1'*unroll_factor["write"]) # Dupliace all the stores
+
           f.seek(0, IO::SEEK_SET)
           f.write(src_asm)
       }

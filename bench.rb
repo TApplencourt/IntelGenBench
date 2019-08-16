@@ -3,6 +3,7 @@
 require 'opencl_ruby_ffi'
 require 'narray_ffi'
 require_relative 'monkey'
+require 'ascii_charts'
 
 s = Struct.new(:type, :byte)
 BABEL_NARRAY =  {"int" =>  s.new("int",2),
@@ -62,7 +63,7 @@ device = OpenCL::platforms::last::devices::first
 context = OpenCL::create_context(device)
 queue = context.create_command_queue(device, :properties => OpenCL::CommandQueue::PROFILING_ENABLE)
 
-oversubscribed_ratio=64*8
+oversubscribed_ratio=2**8
 
 # 7 Thread * Number of EU * overhead number
 global_size=7*device.eu_number*oversubscribed_ratio
@@ -72,9 +73,11 @@ puts "global size: #{global_size}"
 puts "ν: #{device.freq_mhz} mhz"
 
 puts "_ type  B/clk/subslice %peak"
-for bench, type, vector in ["read","write","copy"].product(["int","float", "double"], 
-                                                           [1,2,4])
 
+for bench in ["read","write","copy"]
+  result = Array.new
+  for type in ["int","float", "double"]
+  for vector in  [1,2,4]
   unroll_factor = Hash.new(1)
   unroll_factor[bench] = 1000
   bytes_transfered, elapsed_time = bench(context,queue,global_size, unroll_factor, type,vector)
@@ -86,4 +89,9 @@ for bench, type, vector in ["read","write","copy"].product(["int","float", "doub
   peak = 100 * bw_per_clk_per_subslice / 64
 
   puts "#{bench} #{type}#{vector} #{'%.2f' % bw_per_clk_per_subslice} #{'%.2f' % peak}%"
+  result.push [ "#{type}#{vector}", peak]
+end
+  result.push ["",0] 
+end
+puts AsciiCharts::Cartesian.new(result, :bar => true, :hide_zero => true, :title => "#{bench} (% of peak)" ).draw
 end
