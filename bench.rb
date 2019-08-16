@@ -76,6 +76,7 @@ puts "_ type  B/clk/subslice %peak"
 
 for bench in ["read","write","copy"]
   result = Array.new
+  result.push ["peak",100]
   for type in ["int","float", "double"]
   for vector in  [1,2,4]
   unroll_factor = Hash.new(1)
