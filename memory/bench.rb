@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+gem 'opencl_ruby_ffi', '=1.3.4'
 require 'opencl_ruby_ffi'
 require 'narray_ffi'
 require_relative 'monkey'
@@ -27,7 +28,7 @@ for bench in ["read","write","copy"]
   for type in ["int","float", "double"]
   for vector in  [1,2,4]
   unroll_factor = Hash.new(1)
-  unroll_factor[bench] = 1000
+  unroll_factor[bench] = 1
   bw_per_second = bench_mem_kernel(context,queue,global_size, unroll_factor, type,vector, address_space_qualifier)
 
   bw_per_clk = 1000*bw_per_second / device.freq_mhz

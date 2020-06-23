@@ -24,15 +24,15 @@ end
 class OpenCL::Program
     def kernels_lazy
         # Force the kernel to be build before used
-        @kernels_lazy ||= begin
+        #@kernels_lazy ||= begin
             begin
-                self.build #(options: "-cl-opt-disable")
+                self.build(options: "-cl-opt-disable")
             rescue
                 p self.build_log
                 exit
             end
             self.kernels
-        end
+        #end
     end
 end
 
@@ -54,8 +54,10 @@ class OpenCL::Context
       File::open(bin_path, "wb") { |f| f.write program.binaries.first[1] }
 
       # Disamble it
+      puts 'Disamble'
       `ocloc disasm -file #{bin_path} -device kbl -dump ./ > /dev/null`
       exit if $?.exitstatus != 0
+      puts "ok"
 
       # Patch the assembly
       File::open(asm_path, "r+") { |f|
@@ -68,14 +70,16 @@ class OpenCL::Context
       }
 
       # Reasamble it
-      `ocloc asm -out #{bin_path_new} -device kbl -dump ./`
+      puts "assembe"
+      `ocloc asm -out #{bin_path_new} -device skl -dump ./`
       exit if $?.exitstatus != 0
-
+      puts "ok"
+      return binary
       # Create the new program
-      program_new, _ = OpenCL.create_program_with_binary(self,
-                                                         devices,
-                                                         [File::read("#{bin_path_new}", mode: "rb")])
-      return program_new
+      #program_new, _ = OpenCL.create_program_with_binary(self,
+      #                                                   devices,
+      #                                                   [File::read("#{bin_path_new}", mode: "rb")])
+      #return program_new
     }
   end
 end

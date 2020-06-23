@@ -1,0 +1,47 @@
+L0:
+(W)      mov (8|M0)               r2.0<1>:ud    r0.0<1;1,0>:ud                  
+(W)      or (1|M0)                cr0.0<1>:ud   cr0.0<0;1,0>:ud   0x4C0:uw         {Switch}
+
+<% (0..(@inst_o.n_register_input-1)*@grb_inst).step(@grb_inst) do |i| -%>
+         mov (<%= @simd_size %>|M0) r<%=3 + i %>.0<1>:<%=@datatype%> <%="1.0:#{@datatype}"%>
+<% end -%>
+<%- if @n_outer > 1 -%>
+         mov (1|M0)  acc0.0<1>:d  <%=@n_outer%>:d
+<% end -%>   
+ 
+L1:
+<%- 
+n,s = case @mode
+  when "independent"
+     [@inst_o.n_register, @inst_o.n_register]
+  when "RAR"
+     [1, 1]
+  when "RAW"
+     [1, @n_dep]
+end
+l_inner = (0..(@n_inner-1)*@grb_inst*n).step(@grb_inst*s)
+-%>
+
+<%=
+l_inner.map{ |i|
+  case @mode
+  when "independent"
+    inst_lines [ i,i+1*@grb_inst, i+2*@grb_inst, i+3*@grb_inst].map{ |i| modoff(i) }
+  when "RAR"
+    inst_lines [ modoff(i), 3, 3+@grb_inst, 3+2*@grb_inst]
+  when "RAW"
+    (0..(@n_dep-1)*@grb_inst).step(@grb_inst).map do |j|
+       inst_lines [ modoff(i+j), i==0 ? 3 : modoff(i+j-@n_dep*@grb_inst) , 3+@grb_inst, 3+2*@grb_inst]
+    end
+  end
+}.flatten.join("\n")
+-%>
+
+<%- if @n_outer > 1 -%>
+         add (1|M0) (ne)f0.0     acc0.0<1>:d   acc0.0<0;1,0>:d   -1:d
+         (f0.0)  while (1|M0)  L1
+<%- end -%>
+
+L2:
+(W)      mov (8|M0)               r127.0<1>:ud  r2.0<8;8,1>:ud                   {Compacted}
+(W)      send (8|M0)              null     r127    0x27        0x2000010  {EOT} // wr:1, rd:0; spawner: end of thread
